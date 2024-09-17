@@ -1,0 +1,68 @@
+''' we can try other combinations of letters as well '''
+import numpy as np
+import math
+
+
+# create three letters in 5x5 grid format
+K = [0.99,    0,    0, 0.99, 0,
+     0.99,    0, 0.99,    0, 0,
+     0.99, 0.99,    0,    0, 0,
+     0.99,    0, 0.99,    0, 0,
+     0.99,    0,    0, 0.99, 0]
+I = [0, .99, 0.99, .99, 0,
+     0,   0, 0.99,   0, 0,
+     0,   0, 0.99,   0, 0,
+     0,   0, 0.99,   0, 0,
+     0, .99, 0.99, .99, 0]                   # I
+A = [0,    0,    0.99,    0,    0,
+     0,    0.99,    0, 0.99,    0,
+     0,    0.99, 0.99, 0.99,    0,
+     0,    0.99,    0, 0.99,    0,
+     0.99, 0,       0,    0, 0.99]
+
+# basic matching, confusion matrix
+print("Confusion matrix for K, I, A")
+print(str(np.dot(K, K)) + '\t' + str(round(np.dot(I, K), 2)) + '\t' + str(np.dot(A, K)))
+print(str(round(np.dot(K, I), 2)) + '\t' + str(np.dot(I, I)) + '\t' + str(np.dot(A, I)))
+print(str(np.dot(K, A)) + '\t' + str(np.dot(I, A)) + '\t' + str(np.dot(A, A)))
+
+# create function to add -.1 to each value in letter vector
+def add_negative(letter):
+    ''' this function takes in a letter in the form of a vector and
+    subtracts 0.1 from each of its values '''
+    minus_vector = np.copy(letter)
+
+    for i in range(len(minus_vector)):
+        minus_vector[i] = minus_vector[i] - 0.1
+
+    return minus_vector
+
+# create vectors with negative values
+final_K = add_negative(K)
+final_I = add_negative(I)
+final_A = add_negative(A)
+
+# create your neural network
+NN = [final_K, final_I, final_A]
+print(np.matmul(NN, final_K))
+print(np.matmul(NN, final_I))
+print(np.matmul(NN, final_A))
+
+# check classification with argmax
+# 0 means K, 1 means I, 2 means A since that is how NN was defined
+print(np.argmax(np.matmul(NN, final_K)))
+print(np.argmax(np.matmul(NN, final_I)))
+print(np.argmax(np.matmul(NN, final_A)))
+
+''' create 4 alternatives:
+Make variation one of each character by redrawing it differently, e.g. emphasizing one of the strokes. 
+Variant 2 should be based on slightly blurring the first version. 
+Variant 3 should add some noise to a few pixels of the image. 
+Variant four should combine noise and blurring. 
+
+, other alternatives
+• Shift up, right, left, down
+• Brighten / darken
+• Slant / spiral, other effects or local blur
+• Add mild noise or variations of intensity
+'''
