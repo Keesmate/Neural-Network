@@ -140,6 +140,7 @@ all_letters = K_variations + I_variations + A_variations
 
 # create empty correlation matrix to fill with size of your number of letters in each dimension
 correlation_matrix = np.zeros((len(all_letters), len(all_letters)))
+using_dot = np.zeros((len(all_letters), len(all_letters)))
 
 # loop thorugh length all_letters
 for i in range(len(all_letters)):
@@ -148,8 +149,11 @@ for i in range(len(all_letters)):
     for j in range(len(all_letters)):
 
         # get current inproduct using matrix multiplication and summing
-        correlation_matrix[i, j] = np.sum(all_letters[i] * all_letters[j])
+        correlation_matrix[i, j] = round(np.sum(all_letters[i] * all_letters[j]), 7)
+        # using dot product of vectors just for comparison to show that its the same
+        using_dot[i,j] = round(np.dot(all_letters[i].ravel(), all_letters[j].ravel()), 7)
 
+np.array_equal(correlation_matrix, using_dot)
 # create dataframe in pandas to make it easier to read
 letter_labels = ["K_emph", "K_blur", "K_noisy", "K_blur_noisy",
                  "I_emph", "I_blur", "I_noisy", "I_blur_noisy",
@@ -169,7 +173,8 @@ I_classifier = np.round(np.mean(I_variations, axis=0), 3)
 A_classifier = np.round(np.mean(A_variations, axis=0), 3)
 
 # create neural network in the same way as the lecture slides
-NN1 = [K_classifier, I_classifier, A_classifier]
+classifiers = [K_classifier, I_classifier, A_classifier]
+NN = np.vstack([classif.ravel() for classif in classifiers])
 
 ''' Coding task 5: Test your matrix on all your inputs and show the scores:
 we looped through letter variations and made a grouped bar chart for each letter. we changed which letter was
@@ -180,40 +185,46 @@ K_variation_labels = ["K_emph", "K_blur", "K_noisy", "K_blur_noisy"]
 I_variation_labels = ["I_emph", "I_blur", "I_noisy", "I_blur_noisy"]
 A_variation_labels = ["A_emph", "A_blur", "A_noisy", "A_blur_noisy"]
 
-# create array to store scores of each letters variations
-activations = []
+# create array to store scores of each letters variation
 
 # loop through each variation in K_variations (changed to I_variations and A_variations for  corresponding barcharts)
-for variation in K_variations:
+# for variation in all_letters:
 
-    # obtain the inproduct of each combination of variation and classifier
-    variation_activations = [np.sum(variation * classifier) for classifier in NN1]
-    activations.append(variation_activations)
+#     # obtain the inproduct of each combination of variation and classifier
+#     variation_activations = [np.sum(variation * classifier) for classifier in NN1]
+#     activations.append(variation_activations)
 
-# convert to an array
-activations = np.array(activations)
+# # convert to an array
+# activations = np.array(activations)
+
+# nicer way to do it
+activations = np.vstack([NN@variation.ravel() for variation in all_letters])
+activations_labels = K_variation_labels + I_variation_labels + A_variation_labels
 
 # prepare settings for the barcharts
 N = len(K_variations)
 ind = np.arange(N)
 width = 0.2
 
-# plot the scores for each variation
-plt.figure(figsize=(8, 6))
-plt.bar(ind - width, activations[:, 0], width, label='K classifier', color='green')
-plt.bar(ind, activations[:, 1], width, label='I classifier', color='orange')
-plt.bar(ind + width, activations[:, 2], width, label='A classifier', color='red')
+# plotting
+for letter in activations_labels[::4]:
+    li = activations_labels.index(letter)
 
-# add labels, title, threshold line and show plot
-plt.ylabel('Activation')
-plt.title('Classifier Activations for letter K Variations')
-plt.xticks(ind, K_variation_labels)
-plt.axhline(y=5.2, color='black', linestyle='--', linewidth=1, label='Threshold value')
-plt.legend()
-plt.tight_layout()
-plt.show()
+    # plot the scores for each variation
+    plt.figure(figsize=(8, 6))
+    plt.bar(ind - width, activations[li:li+4,0], width, label='K classifier', color='green')
+    plt.bar(ind, activations[li:li+4, 1], width, label='I classifier', color='orange')
+    plt.bar(ind + width, activations[li:li+4,2], width, label='A classifier', color='red')
 
-
+    # add labels, title, threshold line and show plot
+    plt.ylabel('Activation')
+    plt.title(f'Classifier Activations for letter {letter[0]} Variations')
+    plt.xticks(ind, activations_labels[li:li+4])
+    plt.ylim(top=10)
+    plt.axhline(y=5.2, color='black', linestyle='--', linewidth=1, label='Threshold value')
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(f'{letter[0]}_vars_class.png')
 
 ''' 6. Really test your network: make four or more inputs and use NN1 on it. Find multiple inputs (3 or
 more) that are not correctly classified. Check what happens if you input all 1's or all zeros? Try to make an
