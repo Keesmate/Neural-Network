@@ -281,6 +281,9 @@ print(mid_value)
 overall_random = NN @ np.random.uniform(.05, .95, (25,1))
 print(overall_random)
 
+# WOULD MAKE I'DONT KNOW THRESHOLD SOMETHING BASED ON THE ABOVE VALUES: 
+# eg. response of NN to mean of inputs or random generated values
+
 # to find EXACTLY the same values: Null space of differences between NN classifier vectors
 # Difference vectors capture the differences / distinctions what make the  vectors unique
 # The null space of these difference vectors is the set of vectors that when multiplied by NN matrix are sent to 0
