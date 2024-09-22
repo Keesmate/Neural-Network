@@ -230,7 +230,41 @@ for letter in activations_labels[::4]:
 more) that are not correctly classified. Check what happens if you input all 1's or all zeros? Try to make an
 incorrectly classified character by changing only one pixel. Is this possible? Can you do it by only changing
 two pixels? Three pixels? '''
+# Input all ones:
+# array([ 9.384,  8.434, 10.053]) - High values for everything
+all_ones = NN @ np.ones(K_emph.shape).ravel()
 
+# Input all zeros
+# array([0., 0., 0.]) - Cannot classify as anything, no input
+all_zeros = NN @ np.zeros(K_emph.shape).ravel()
+
+# Making incorrectly classified characters by changing 1, 2, 3 pixels in K
+print(NN@K_emph.ravel()) # original
+K_pixel_change = np.copy(K_emph)
+
+K_pixel_change[0, 0] = 0
+print(NN@K_pixel_change.ravel()) # 1 pix
+K_pixel_change[:2, 0] = 0
+print(NN@K_pixel_change.ravel()) # 2 pix
+K_pixel_change[:3, 0] = 0 
+print(NN@K_pixel_change.ravel()) # 3 pix
+K_pixel_change[:, 0] = 0 # 5 pix
+print(NN@K_pixel_change.ravel())
+
+# trying with I now
+print(NN@I_blur.ravel()) # original
+I_pixel_change = np.copy(I_blur)
+I_pixel_change[0, 2] = 0
+print(NN@I_pixel_change.ravel()) # 1 pix
+I_pixel_change[:2, 2] = 0
+print(NN@I_pixel_change.ravel()) # 2 pix
+I_pixel_change[:3, 2] = 0 
+print(NN@I_pixel_change.ravel()) # 3 pix
+I_pixel_change[:, 2] = 0 # 5 pix
+print(NN@I_pixel_change.ravel())
+
+# NN gets worse and worse at recognizing K_emph or I_blur but doesnt confuse it for something else, 
+# Instead it doesnt classify anything
 
 '''
 7. Find multiple inputs (not all zeros) so that NN1 cannot make a decision: it gives exactly equal values for all
