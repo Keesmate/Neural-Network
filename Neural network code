@@ -54,7 +54,7 @@ A_emph = np.array([[0.  , 0.  , 0.99, 0.  , 0.  ],
 # Variation 2: In these variations, each letter has been blurred using the function blur
 #################################
 
-def blur(letter, size=3, high_value_threshold=0.8, blur_factor=0.2):
+def blur(letter, size=3, high_value_threshold=0.9, blur_factor=0.5):
     ''' this function takes in a letter (5x5 matrix) and applies a blur around high-value pixels
     the high_value_threshold is the value above which pixels are considered "high value"
     and the blur_factor is the amount of weight to give to the blur when adding to output values
@@ -103,7 +103,7 @@ A_blur = blur(A)
 #################################
 # Variation 3: In these variations, each letter has had noise added to it using the function (add_noise)
 #################################
-def add_noise(letter, noise_factor=0.1):
+def add_noise(letter, noise_factor=0.4):
     ''' this function adds random noise to an inputted letter matrix
     the noise_factor controls the degree of noise
     '''
@@ -176,6 +176,26 @@ A_classifier = np.round(np.mean(A_variations, axis=0), 3)
 classifiers = [K_classifier, I_classifier, A_classifier]
 NN = np.vstack([classif.ravel() for classif in classifiers])
 
+def softmax(x):
+    ''' this function takes in an array of numbers and computes the softmax for them '''
+    e_x = np.exp(x - np.max(x))  # Subtract max for numerical stability
+    return e_x / e_x.sum()
+
+def NN_classifier(NN, letter):
+    ''' this NN function takes in the rudimentary NN for K, I and A and
+    takes in a letter to be classified.
+    It outputs the softmax classification of the input letter. '''
+    # Unravel the letter matrix into a 1D vector
+    input_vector = letter.ravel()
+
+    # Perform matrix multiplication with the classifier matrix (NN)
+    activations = NN @ input_vector
+
+    # Apply the softmax function to the activations
+    softmax_output = softmax(activations)
+
+    return softmax_output
+
 ''' Coding task 5: Test your matrix on all your inputs and show the scores:
 we looped through letter variations and made a grouped bar chart for each letter. we changed which letter was
 looped through and saved the corresponding grouped barchart for each letter with the current letter in green
@@ -185,21 +205,11 @@ K_variation_labels = ["K_emph", "K_blur", "K_noisy", "K_blur_noisy"]
 I_variation_labels = ["I_emph", "I_blur", "I_noisy", "I_blur_noisy"]
 A_variation_labels = ["A_emph", "A_blur", "A_noisy", "A_blur_noisy"]
 
-# create array to store scores of each letters variation
-
-# loop through each variation in K_variations (changed to I_variations and A_variations for  corresponding barcharts)
-# for variation in all_letters:
-
-#     # obtain the inproduct of each combination of variation and classifier
-#     variation_activations = [np.sum(variation * classifier) for classifier in NN1]
-#     activations.append(variation_activations)
-
-# # convert to an array
-# activations = np.array(activations)
 
 # nicer way to do it
-activations = np.vstack([NN@variation.ravel() for variation in all_letters])
+activations = np.vstack([NN_classifier(NN, variation) for variation in all_letters])
 activations_labels = K_variation_labels + I_variation_labels + A_variation_labels
+
 
 # prepare settings for the barcharts
 N = len(K_variations)
@@ -220,51 +230,98 @@ for letter in activations_labels[::4]:
     plt.ylabel('Activation')
     plt.title(f'Classifier Activations for letter {letter[0]} Variations')
     plt.xticks(ind, activations_labels[li:li+4])
-    plt.ylim(top=10)
-    plt.axhline(y=5.2, color='black', linestyle='--', linewidth=1, label='Threshold value')
+    plt.ylim(top=1)
+    plt.axhline(y=0.6, color='black', linestyle='--', linewidth=1, label='Threshold value')
     plt.legend()
     plt.tight_layout()
     plt.savefig(f'{letter[0]}_vars_class.png')
 
-''' 6. Really test your network: make four or more inputs and use NN1 on it. Find multiple inputs (3 or
-more) that are not correctly classified. Check what happens if you input all 1's or all zeros? Try to make an
-incorrectly classified character by changing only one pixel. Is this possible? Can you do it by only changing
-two pixels? Three pixels? '''
+''' 6. Really test your network:
+We tested our network on many varying inputs. These include:
+Inputs of all 1's and all 0's
+Inputs with either 1, 2, 3 or 5 pixels changed
+Input with extra blur
+Input with extra noise '''
 # Input all ones:
-# array([ 9.384,  8.434, 10.053]) - High values for everything
+# array([ 9.384,  8.434, 10.053]) - High raw values for everything
 all_ones = NN @ np.ones(K_emph.shape).ravel()
+# when getting a softmax output the all ones is classified as an A with 90% accuracy
+print("all ones")
+print(NN_classifier(NN, np.ones(K_emph.shape)))
 
 # Input all zeros
 # array([0., 0., 0.]) - Cannot classify as anything, no input
 all_zeros = NN @ np.zeros(K_emph.shape).ravel()
 
-# Making incorrectly classified characters by changing 1, 2, 3 pixels in K
-print(NN@K_emph.ravel()) # original
-K_pixel_change = np.copy(K_emph)
+# Making incorrectly classified characters by changing 1, 2, 3 and 5 pixels
+print("original K_blur")
+print(NN_classifier(NN,K_blur))
 
-K_pixel_change[0, 0] = 0
-print(NN@K_pixel_change.ravel()) # 1 pix
-K_pixel_change[:2, 0] = 0
-print(NN@K_pixel_change.ravel()) # 2 pix
-K_pixel_change[:3, 0] = 0 
-print(NN@K_pixel_change.ravel()) # 3 pix
-K_pixel_change[:, 0] = 0 # 5 pix
-print(NN@K_pixel_change.ravel())
+# one pixel change for K
+K_pixel_change = np.copy(K_blur)
+K_pixel_change[0, 0] = -3
+print("one pixel change resulting in misclassification as A")
+print(NN_classifier(NN, K_pixel_change))
 
-# trying with I now
-print(NN@I_blur.ravel()) # original
+# two pixel change for K
+print("two pixel change resulting in misclassification as A")
+K_pixel_change = np.copy(K_blur)
+K_pixel_change[[2, 0], [0, 0]] = -0.8
+print(NN_classifier(NN, K_pixel_change))
+
+# three pixel change for K
+print("three pixel change resulting in misclassification as A")
+K_pixel_change = np.copy(K_blur)
+K_pixel_change[[1, 0, 0], [0, 0, 3]] = -0.3
+print(NN_classifier(NN, K_pixel_change))
+
+# five pixel change for K
+print("five pixel change resulting in misclassification as A")
+K_pixel_change = np.copy(K_blur)
+K_pixel_change[[1, 1, 2, 3, 0], [0, 2, 0, 2, 0]] = 0
+print(NN_classifier(NN, K_pixel_change))
+
+
+# changing pixels in I_blur
+print("original")
+print(NN_classifier(NN, I_blur))
+
+# one pixel change for I
+print("one pixel change resulting in misclassification as A")
 I_pixel_change = np.copy(I_blur)
-I_pixel_change[0, 2] = 0
-print(NN@I_pixel_change.ravel()) # 1 pix
-I_pixel_change[:2, 2] = 0
-print(NN@I_pixel_change.ravel()) # 2 pix
-I_pixel_change[:3, 2] = 0 
-print(NN@I_pixel_change.ravel()) # 3 pix
-I_pixel_change[:, 2] = 0 # 5 pix
-print(NN@I_pixel_change.ravel())
+I_pixel_change[1, 2] = -2
+print(NN_classifier(NN, I_pixel_change))
 
-# NN gets worse and worse at recognizing K_emph or I_blur but doesnt confuse it for something else, 
-# Instead it doesnt classify anything
+# two pixel change for I
+print("two pixel change resulting in misclassification as A")
+I_pixel_change = np.copy(I_blur)
+I_pixel_change[[0, 4],[1, 2]] = -.5
+print(NN_classifier(NN, I_pixel_change))
+
+# three pixel change for I
+print("three pixel change resulting in misclassification as A")
+I_pixel_change = np.copy(I_blur)
+I_pixel_change[[4, 4, 0], [2, 1, 3]] = -.25
+print(NN_classifier(NN, I_pixel_change))
+
+# five pixel change for I
+print("five pixel change resulting in misclassification as A")
+I_pixel_change = np.copy(I_blur)
+I_pixel_change[[1, 4, 3, 0, 4], [2, 3, 2, 3, 1]] = 0
+print(NN_classifier(NN, I_pixel_change))
+
+# testing the network on a very blurry I
+print("Blurry I resulting in misclassification as A")
+blurry_I = blur(I_blur, blur_factor=1)
+print(NN_classifier(NN, blurry_I))
+
+# testing the network on a very noisy A
+print("Original A_blur_noisy")
+print(NN@A_blur_noisy.ravel())
+print("Noisy A resulting in misclassification as K")
+noisy_A = add_noise(A_blur_noisy, noise_factor=1)
+print(NN_classifier(NN, noisy_A))
+
 
 '''
 7. Find multiple inputs (not all zeros) so that NN1 cannot make a decision: it gives exactly equal values for all
@@ -274,20 +331,23 @@ characters. Is there a method for finding such inputs? Describe how you can crea
 # for multiple inputs this must be the same
 # input that is average of classifiers: not EXACTLY same value for each decisino but more or less
     # effectively the same as average of all inputs since classifier is just average of all inputs of one category
-average_of_classifier = NN @ np.mean(NN, axis = 0) 
+average_of_classifier = NN @ np.mean(NN, axis = 0)
+print('average_of_classifier')
 print(average_of_classifier)
 mid_value = NN @ np.random.uniform(.45,.55,(25,1))
+print('mid_value')
 print(mid_value)
 overall_random = NN @ np.random.uniform(.05, .95, (25,1))
+print('overall_random')
 print(overall_random)
 
-# WOULD MAKE I'DONT KNOW THRESHOLD SOMETHING BASED ON THE ABOVE VALUES: 
+# WOULD MAKE I'DONT KNOW THRESHOLD SOMETHING BASED ON THE ABOVE VALUES:
 # eg. response of NN to mean of inputs or random generated values
 
 # to find EXACTLY the same values: Null space of differences between NN classifier vectors
 # Difference vectors capture the differences / distinctions what make the  vectors unique
 # The null space of these difference vectors is the set of vectors that when multiplied by NN matrix are sent to 0
-# which can be interpreted as the DIFFERENCES between the vectors becoming 0 
+# which can be interpreted as the DIFFERENCES between the vectors becoming 0
 from scipy.linalg import null_space
 
 # Differences between classifiers
